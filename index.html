@@ -266,7 +266,7 @@ input:focus,select:focus{border-color:#1e5fa0}
       </div>
       <button class="btn btn-primary" style="margin-top:6px" onclick="doRegister()"><i class="ti ti-user-plus"></i> 注册 Register</button>
     </div>
-    <div class="auth-footer">如需帮助请联系培训负责人 · huyichen@reunionmed.com</div>
+    <div class="auth-footer">如需帮助请联系培训负责人 · QMS Training Admin</div>
   </div>
 </div>
 
@@ -379,8 +379,8 @@ input:focus,select:focus{border-color:#1e5fa0}
             <button class="btn btn-primary btn-sm" onclick="addLessonRow()"><i class="ti ti-plus"></i> 新增内容</button>
           </div>
           <table class="tbl" id="lessons-admin-tbl">
-            <thead><tr><th>内容名称</th><th>类型</th><th>所属模块</th><th>文件/链接</th><th>操作</th></tr></thead>
-            <tbody id="lessons-admin-tbody"><tr><td colspan="5" style="text-align:center;color:#7a94aa;padding:20px">加载中...</td></tr></tbody>
+            <thead><tr><th>内容名称</th><th>类型</th><th>所属模块</th><th>文件/链接</th><th>允许下载</th><th>操作</th></tr></thead>
+            <tbody id="lessons-admin-tbody"><tr><td colspan="6" style="text-align:center;color:#7a94aa;padding:20px">加载中...</td></tr></tbody>
           </table>
           <div class="btn-row"><button class="btn btn-green" onclick="saveLessons()"><i class="ti ti-device-floppy"></i> 保存更改 Save</button></div>
           <div id="upload-msg" class="hidden" style="margin-top:10px"></div>
@@ -426,6 +426,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Show a clear banner if keys are still placeholders
+if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#c0392b;color:#fff;padding:14px 20px;font-size:13px;font-family:sans-serif;display:flex;align-items:center;gap:10px;line-height:1.5';
+    banner.innerHTML = '<strong>⚠️ 配置未完成：</strong>&nbsp;请在 index.html 中替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 为你的真实 Supabase 凭据，否则登录注册无法工作。';
+    document.body.prepend(banner);
+  });
+}
+
 const TYPE_ICONS = {pdf:'ti-file-type-pdf',video:'ti-player-play',ppt:'ti-presentation',doc:'ti-file-description',link:'ti-link',task:'ti-checkbox',quiz:'ti-help'};
 const TYPE_LABELS = {pdf:'PDF文档',video:'视频',ppt:'PPT课件',doc:'Word文档',link:'外部链接',task:'实践任务',quiz:'知识测验'};
 const TYPE_BADGES = {pdf:'tb-pdf',video:'tb-video',ppt:'tb-ppt',doc:'tb-doc',link:'tb-link',task:'tb-task',quiz:'tb-quiz'};
@@ -458,9 +468,21 @@ async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw = document.getElementById('login-pw').value;
   const err = document.getElementById('login-err');
+  const btn = document.querySelector('#tab-login .btn-primary');
   err.classList.remove('show');
+  if (!email || !pw) { err.textContent = '请填写邮箱和密码'; err.classList.add('show'); return; }
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 登录中...';
+  btn.disabled = true;
   const {error} = await sb.auth.signInWithPassword({email, password: pw});
-  if (error) { err.textContent = '登录失败：' + error.message; err.classList.add('show'); }
+  btn.innerHTML = '<i class="ti ti-login"></i> 登录 Login';
+  btn.disabled = false;
+  if (error) {
+    let msg = '登录失败：' + error.message;
+    if (error.message.includes('Invalid login')) msg = '邮箱或密码错误，请重试';
+    if (error.message.includes('fetch') || error.message.includes('network')) msg = '⚠️ 无法连接服务器，请检查 SUPABASE_URL 和 SUPABASE_ANON_KEY 是否已正确填写';
+    err.textContent = msg;
+    err.classList.add('show');
+  }
 }
 
 async function doRegister() {
@@ -470,14 +492,30 @@ async function doRegister() {
   const role = document.getElementById('reg-role').value;
   const dept = document.getElementById('reg-dept').value.trim();
   const err = document.getElementById('reg-err');
+  const btn = document.querySelector('#tab-register .btn-primary');
   err.classList.remove('show');
+  err.style.background = ''; err.style.color = '';
   if (!name||!email||!pw) { err.textContent='请填写所有必填字段'; err.classList.add('show'); return; }
+  if (pw.length < 6) { err.textContent='密码至少需要6个字符'; err.classList.add('show'); return; }
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 注册中...';
+  btn.disabled = true;
   const {error} = await sb.auth.signUp({
     email, password: pw,
     options: { data: { name, role, department: dept } }
   });
-  if (error) { err.textContent='注册失败：'+error.message; err.classList.add('show'); }
-  else { err.style.background='#e4f7ee';err.style.color='#1a7a5a';err.textContent='✓ 注册成功！请检查邮箱验证后登录。';err.classList.add('show'); }
+  btn.innerHTML = '<i class="ti ti-user-plus"></i> 注册 Register';
+  btn.disabled = false;
+  if (error) {
+    let msg = '注册失败：' + error.message;
+    if (error.message.includes('fetch') || error.message.includes('network')) msg = '⚠️ 无法连接服务器，请检查 SUPABASE_URL 和 SUPABASE_ANON_KEY 是否已正确填写';
+    if (error.message.includes('already registered')) msg = '该邮箱已注册，请直接登录';
+    err.textContent = msg; err.classList.add('show');
+  } else {
+    err.style.background='#e4f7ee'; err.style.color='#1a7a5a';
+    err.textContent='✓ 注册成功！正在跳转...'; err.classList.add('show');
+    // Auto-login after register (works when email confirm is disabled)
+    await sb.auth.signInWithPassword({email, password: pw});
+  }
 }
 
 async function doLogout() {
@@ -670,8 +708,29 @@ function openLesson(moduleId, lessonId) {
       </div>
     </div>`;
   } else {
-    const openLabel = l.type==='link'?'打开链接':l.type==='video'?'播放视频':'下载/查看';
-    const fileBtn = l.file_url ? `<a href="${l.file_url}" target="_blank" class="btn btn-primary"><i class="ti ti-external-link"></i> ${openLabel}</a>` : `<button class="btn btn-ghost" disabled>文件待上传</button>`;
+    // Determine action button based on type and allow_download flag
+    let fileBtn = `<button class="btn btn-ghost" disabled>文件待上传</button>`;
+    if (l.file_url) {
+      if (l.type === 'link' || l.type === 'video') {
+        // Links and videos always open externally
+        const label = l.type === 'link' ? '打开链接' : '播放视频';
+        fileBtn = `<a href="${l.file_url}" target="_blank" class="btn btn-primary"><i class="ti ti-external-link"></i> ${label}</a>`;
+      } else if (l.allow_download) {
+        // Download enabled: show both a view button and a download button
+        fileBtn = `
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <a href="${l.file_url}" target="_blank" class="btn btn-ghost"><i class="ti ti-eye"></i> 在线查看</a>
+            <a href="${l.file_url}" download class="btn btn-primary"><i class="ti ti-download"></i> 下载文件</a>
+          </div>`;
+      } else {
+        // Read-only: open in new tab but no download attribute
+        fileBtn = `
+          <a href="${l.file_url}" target="_blank" class="btn btn-primary"><i class="ti ti-eye"></i> 在线查看</a>
+          <div style="margin-top:10px;font-size:11px;color:#9ab0c4;display:flex;align-items:center;gap:5px">
+            <i class="ti ti-lock" style="font-size:13px"></i> 此文件仅供在线阅读，不支持下载
+          </div>`;
+      }
+    }
     html = `<div class="viewer">
       <div class="viewer-bar">
         <span class="tbadge ${TYPE_BADGES[l.type]||''}">${TYPE_LABELS[l.type]||l.type}</span>
@@ -851,24 +910,40 @@ function switchAdminTab(name) {
 }
 
 // --- Lessons admin ---
+// Types where download control is meaningful (videos/links are always stream/open)
+const DOWNLOADABLE_TYPES = new Set(['pdf','doc','ppt']);
+
+function downloadToggleHtml(i, l) {
+  if (!DOWNLOADABLE_TYPES.has(l.type)) {
+    return `<td style="text-align:center"><span style="font-size:11px;color:#b8d0e8">—</span></td>`;
+  }
+  const on = !!l.allow_download;
+  return `<td style="text-align:center">
+    <div class="toggle-sw ${on?'on':'off'}" style="margin:0 auto"
+         onclick="adminLessonsEdits[${i}].allow_download=!adminLessonsEdits[${i}].allow_download;this.className='toggle-sw '+(adminLessonsEdits[${i}].allow_download?'on':'off')">
+    </div>
+  </td>`;
+}
+
 function buildLessonsAdmin() {
   const mods = allModules;
   document.getElementById('lessons-admin-tbody').innerHTML = adminLessonsEdits.map((l,i)=>`
     <tr>
       <td><input class="tbl-input" value="${l.name}" onchange="adminLessonsEdits[${i}].name=this.value" style="min-width:160px"></td>
-      <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].type=this.value">
+      <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].type=this.value;buildLessonsAdmin()">
         ${Object.keys(TYPE_LABELS).map(t=>`<option value="${t}" ${l.type===t?'selected':''}>${TYPE_LABELS[t]}</option>`).join('')}
       </select></td>
       <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].module_id=parseInt(this.value)">
         ${mods.map(m=>`<option value="${m.id}" ${l.module_id===m.id?'selected':''}>${m.short_title}</option>`).join('')}
       </select></td>
       <td><input class="tbl-input" value="${l.file_url||''}" placeholder="URL 或留空" onchange="adminLessonsEdits[${i}].file_url=this.value" style="min-width:160px"></td>
+      ${downloadToggleHtml(i, l)}
       <td><button class="btn btn-danger btn-sm" onclick="deleteLessonRow(${i})"><i class="ti ti-trash"></i></button></td>
     </tr>`).join('');
 }
 
 function addLessonRow() {
-  adminLessonsEdits.push({id:null,name:'新内容',type:'pdf',module_id:allModules[0]?.id||1,file_url:'',sort_order:999,duration_label:''});
+  adminLessonsEdits.push({id:null,name:'新内容',type:'pdf',module_id:allModules[0]?.id||1,file_url:'',sort_order:999,duration_label:'',allow_download:false});
   buildLessonsAdmin();
 }
 
@@ -877,10 +952,11 @@ function deleteLessonRow(i) { adminLessonsEdits.splice(i,1); buildLessonsAdmin()
 async function saveLessons() {
   const msg = document.getElementById('upload-msg');
   for (const l of adminLessonsEdits) {
+    const payload = {name:l.name,type:l.type,module_id:l.module_id,file_url:l.file_url,allow_download:!!l.allow_download};
     if (l.id) {
-      await sb.from('lessons').update({name:l.name,type:l.type,module_id:l.module_id,file_url:l.file_url}).eq('id',l.id);
+      await sb.from('lessons').update(payload).eq('id',l.id);
     } else {
-      const {data} = await sb.from('lessons').insert({name:l.name,type:l.type,module_id:l.module_id,file_url:l.file_url,sort_order:l.sort_order||999}).select().single();
+      const {data} = await sb.from('lessons').insert({...payload,sort_order:l.sort_order||999}).select().single();
       if(data) l.id=data.id;
     }
   }
