@@ -4,9 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>医疗器械QMS培训平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<script>
+// Show a loading overlay until Supabase is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.createElement('div');
+  overlay.id = 'init-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0e2a47;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;gap:14px';
+  overlay.innerHTML = \`<div style="font-size:28px">🏥</div>
+    <div style="font-size:15px;font-weight:600">医疗器械QMS培训平台</div>
+    <div style="font-size:12px;opacity:.6;display:flex;align-items:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      连接中，请稍候...
+    </div>\`;
+  document.body.appendChild(overlay);
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans','Noto Sans SC',sans-serif;background:#f0f4f8;color:#1a2b3c;min-height:100vh;font-size:14px}
@@ -473,14 +490,24 @@ async function doLogin() {
   if (!email || !pw) { err.textContent = '请填写邮箱和密码'; err.classList.add('show'); return; }
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 登录中...';
   btn.disabled = true;
-  const {error} = await sb.auth.signInWithPassword({email, password: pw});
+  let data, error;
+  try {
+    ({ data, error } = await sb.auth.signInWithPassword({email, password: pw}));
+    console.log('[Login] data:', data, 'error:', error);
+  } catch(e) {
+    console.error('[Login] exception:', e);
+    error = e;
+  }
   btn.innerHTML = '<i class="ti ti-login"></i> 登录 Login';
   btn.disabled = false;
   if (error) {
     let msg = '登录失败：' + error.message;
-    if (error.message.includes('Invalid login')) msg = '邮箱或密码错误，请重试';
-    if (error.message.includes('fetch') || error.message.includes('network')) msg = '⚠️ 无法连接服务器，请检查 SUPABASE_URL 和 SUPABASE_ANON_KEY 是否已正确填写';
+    if (error.message.includes('Invalid login') || error.message.includes('invalid_credentials')) msg = '邮箱或密码错误，请重试';
+    if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed')) msg = '⚠️ 无法连接 Supabase，请确认 URL 和 Key 已正确填写';
     err.textContent = msg;
+    err.classList.add('show');
+  } else if (!data?.session) {
+    err.textContent = '⚠️ 登录无响应，请打开浏览器控制台（F12）查看错误详情';
     err.classList.add('show');
   }
 }
@@ -525,7 +552,12 @@ async function doLogout() {
 }
 
 // ===================== BOOT =====================
+// Remove loading overlay now that Supabase is ready
+const _overlay = document.getElementById('init-overlay');
+if (_overlay) _overlay.remove();
+
 sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('[Auth] event:', event, 'session:', session);
   if (session) {
     currentUser = session.user;
     await loadProfile();
@@ -535,6 +567,10 @@ sb.auth.onAuthStateChange(async (event, session) => {
     buildSidebar();
     buildDashboard();
     showView('dashboard');
+  } else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+    // Not logged in — make sure auth screen is showing
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('main-app').classList.add('hidden');
   }
 });
 
