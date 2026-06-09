@@ -541,41 +541,59 @@ async function doLogout() {
 sb.auth.onAuthStateChange(async (event, session) => {
   console.log('[Auth] event:', event, 'session:', session);
   if (session) {
-    currentUser = session.user;
-    await loadProfile();
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('main-app').classList.remove('hidden');
-    await loadAllData();
-    buildSidebar();
-    buildDashboard();
-    showView('dashboard');
+    try {
+      currentUser = session.user;
+      await loadProfile();
+      await loadAllData();
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('main-app').classList.remove('hidden');
+      buildSidebar();
+      buildDashboard();
+      showView('dashboard');
+    } catch(e) {
+      console.error('[Boot] error:', e);
+      // Show error on login screen instead of silently hanging
+      var err = document.getElementById('login-err');
+      if (err) { err.textContent = '加载失败：' + e.message + '（请刷新重试）'; err.classList.add('show'); }
+    }
   } else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-    // Not logged in — make sure auth screen is showing
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('main-app').classList.add('hidden');
   }
 });
 
 async function loadProfile() {
-  const {data} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-  currentProfile = data;
+  const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (data) {
+    currentProfile = data;
+    return;
+  }
+  // Profile missing — create it from auth metadata (happens when trigger failed)
+  console.warn('[loadProfile] no profile found, creating from metadata');
+  const meta = currentUser.user_metadata || {};
+  const fallback = {
+    id: currentUser.id,
+    name: meta.name || currentUser.email,
+    role: meta.role || 'qc',
+    department: meta.department || '未分配'
+  };
+  const {data: created, error: createErr} = await sb.from('profiles').upsert(fallback).select().single();
+  if (createErr) throw new Error('无法创建用户档案：' + createErr.message);
+  currentProfile = created;
 }
 
 async function loadAllData() {
-  // Load modules
   const {data: mods} = await sb.from('modules').select('*').order('sort_order');
   allModules = mods || [];
 
-  // Load lessons
   const {data: lessons} = await sb.from('lessons').select('*').order('sort_order');
   allLessons = lessons || [];
 
-  // Load role access for current user's role
-  const {data: access} = await sb.from('role_module_access').select('*').eq('role', currentProfile.role);
+  const role = currentProfile ? currentProfile.role : 'qc';
+  const {data: access} = await sb.from('role_module_access').select('*').eq('role', role);
   roleAccess = {};
   (access||[]).forEach(a => roleAccess[a.module_id] = a.is_visible);
 
-  // Load user progress
   const {data: prog} = await sb.from('progress').select('lesson_id').eq('user_id', currentUser.id).eq('completed', true);
   userProgress = {};
   (prog||[]).forEach(p => userProgress[p.lesson_id] = true);
