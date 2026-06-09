@@ -8,18 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
-<script>
-// Show a loading overlay until Supabase is ready
-document.addEventListener('DOMContentLoaded', function() {
-  var overlay = document.createElement('div');
-  overlay.id = 'init-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0e2a47;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;gap:14px';
-  overlay.innerHTML = '<div style="font-size:36px">🏥</div>'
-    + '<div style="font-size:15px;font-weight:600">医疗器械QMS培训平台</div>'
-    + '<div style="font-size:12px;opacity:.6">连接中，请稍候...</div>';
-  document.body.appendChild(overlay);
-});
-</script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -433,8 +422,8 @@ input:focus,select:focus{border-color:#1e5fa0}
 
 <script>
 // ===================== CONFIG — 填入你的 Supabase 凭据 =====================
-const SUPABASE_URL = 'https://yylmmtwxtgwwejgcjlhv.supabase.co';       // 替换为你的 Project URL
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bG1tdHd4dGd3d2VqZ2NqbGh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODM4MTEsImV4cCI6MjA5NjU1OTgxMX0.f54Gz7KGy3lHS_5s6xs53I2cJGQCTYvsK0qBQQWK2iA'; // 替换为你的 anon public key
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // 替换为你的 Project URL
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // 替换为你的 anon public key
 // =========================================================================
 
 const { createClient } = supabase;
@@ -549,10 +538,6 @@ async function doLogout() {
 }
 
 // ===================== BOOT =====================
-// Remove loading overlay now that Supabase is ready
-const _overlay = document.getElementById('init-overlay');
-if (_overlay) _overlay.remove();
-
 sb.auth.onAuthStateChange(async (event, session) => {
   console.log('[Auth] event:', event, 'session:', session);
   if (session) {
