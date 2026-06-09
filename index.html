@@ -543,18 +543,24 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (session) {
     try {
       currentUser = session.user;
+      console.log('[Boot] loading profile for', currentUser.id);
       await loadProfile();
+      console.log('[Boot] profile loaded:', currentProfile);
+      console.log('[Boot] loading all data...');
       await loadAllData();
+      console.log('[Boot] modules:', allModules.length, 'lessons:', allLessons.length);
       document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('main-app').classList.remove('hidden');
       buildSidebar();
       buildDashboard();
       showView('dashboard');
+      console.log('[Boot] done — dashboard shown');
     } catch(e) {
-      console.error('[Boot] error:', e);
-      // Show error on login screen instead of silently hanging
+      console.error('[Boot] FAILED:', e.message, e.stack);
+      document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('main-app').classList.add('hidden');
       var err = document.getElementById('login-err');
-      if (err) { err.textContent = '加载失败：' + e.message + '（请刷新重试）'; err.classList.add('show'); }
+      if (err) { err.textContent = '加载失败：' + e.message + ' （请截图此错误发给管理员）'; err.classList.add('show'); }
     }
   } else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
     document.getElementById('auth-screen').classList.remove('hidden');
