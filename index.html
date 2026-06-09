@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>医疗器械QMS培训平台</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans','Noto Sans SC',sans-serif;background:#f0f4f8;color:#1a2b3c;min-height:100vh;font-size:14px}
+.app{display:flex;min-height:100vh}
+
+/* ===== AUTH SCREEN ===== */
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0e2a47 0%,#1e5fa0 100%)}
+.auth-card{background:#fff;border-radius:16px;padding:36px 40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo .brand{font-size:11px;font-weight:700;letter-spacing:.12em;color:#7a94aa;text-transform:uppercase;margin-bottom:6px}
+.auth-logo h1{font-size:20px;font-weight:600;color:#0e2a47;line-height:1.35}
+.auth-logo p{font-size:12px;color:#7a94aa;margin-top:4px}
+.auth-tabs{display:flex;gap:0;border-bottom:1px solid #e4ecf3;margin-bottom:22px}
+.auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:500;color:#7a94aa;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.auth-tab.active{color:#0e2a47;border-bottom-color:#1e5fa0}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:#4a6480;margin-bottom:5px;display:block}
+input[type=text],input[type=email],input[type=password],select{background:#f7fafd;border:1px solid #e4ecf3;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;color:#0e2a47;outline:none;width:100%;transition:border-color .15s}
+input:focus,select:focus{border-color:#1e5fa0}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:background .15s;text-align:center;justify-content:center}
+.btn-primary{background:#0e2a47;color:#fff;width:100%}.btn-primary:hover{background:#1e5fa0}
+.btn-green{background:#2cad7f;color:#fff}.btn-green:hover{background:#1a907a}
+.btn-ghost{background:transparent;border:1px solid #ccdae7;color:#4a6480}.btn-ghost:hover{background:#f0f4f8}
+.btn-danger{background:#fdecea;color:#c0392b;border:1px solid #f0c0bb}.btn-danger:hover{background:#f5d0cc}
+.btn-sm{padding:6px 12px;font-size:12px}
+.auth-err{background:#fdecea;border:1px solid #f0c0bb;color:#c0392b;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px;display:none}
+.auth-err.show{display:block}
+.auth-footer{text-align:center;margin-top:16px;font-size:12px;color:#7a94aa}
+
+/* ===== SIDEBAR ===== */
+.sidebar{width:248px;background:#0e2a47;color:#fff;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand-sm{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.site-title{font-size:15px;font-weight:600;line-height:1.35;color:#fff}
+.site-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px}
+.prog-wrap{padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.prog-label{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;display:flex;justify-content:space-between}
+.prog-track{background:rgba(255,255,255,.12);border-radius:99px;height:6px}
+.prog-fill{background:#4ec9a0;height:6px;border-radius:99px;transition:width .5s}
+.nav-sec{padding:8px 0;flex:1;overflow-y:auto}
+.nav-grp{font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.25);padding:10px 18px 3px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.58);transition:background .15s,color .15s;position:relative;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:rgba(78,201,160,.18);color:#4ec9a0}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#4ec9a0;border-radius:0 2px 2px 0}
+.nav-item .ni{font-size:17px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:rgba(78,201,160,.25);color:#4ec9a0;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px}
+.nav-bottom{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08)}
+.nav-user{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:#1e5fa0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:13px;color:#fff;font-weight:500}
+.u-role{font-size:11px;color:rgba(255,255,255,.35)}
+.role-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin-top:3px;font-weight:600}
+.rb-admin{background:rgba(228,100,80,.25);color:#f87b6a}
+.rb-qc{background:rgba(78,201,160,.2);color:#4ec9a0}
+.rb-qa{background:rgba(100,160,228,.2);color:#6ab0f5}
+.rb-prod{background:rgba(228,180,78,.2);color:#f5c84a}
+.logout-btn{margin-left:auto;background:rgba(255,255,255,.08);border:none;color:rgba(255,255,255,.5);border-radius:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:background .15s}
+.logout-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ===== MAIN ===== */
+.main{flex:1;overflow-x:hidden;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid #e4ecf3;padding:13px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:600;color:#0e2a47;display:flex;align-items:center;gap:8px}
+.topbar-meta{font-size:12px;color:#7a94aa;display:flex;align-items:center;gap:5px}
+.content{padding:24px 28px;flex:1}
+
+/* ===== DASHBOARD ===== */
+.welcome{background:#0e2a47;border-radius:14px;padding:26px 30px;color:#fff;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.welcome h2{font-size:20px;font-weight:600;margin-bottom:5px}
+.welcome p{font-size:13px;color:rgba(255,255,255,.62);max-width:400px;line-height:1.6}
+.welcome-icon{font-size:52px;color:rgba(255,255,255,.15)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:#fff;border-radius:10px;padding:16px 18px;border:1px solid #e4ecf3}
+.stat-icon{font-size:18px;margin-bottom:5px}
+.si-blue{color:#1e5fa0}.si-green{color:#2cad7f}.si-amber{color:#d4850a}.si-red{color:#c0392b}
+.stat-val{font-size:24px;font-weight:600;color:#0e2a47}
+.stat-lbl{font-size:11px;color:#7a94aa;margin-top:1px}
+.sec-title{font-size:14px;font-weight:600;color:#0e2a47;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.mod-card{background:#fff;border-radius:12px;border:1px solid #e4ecf3;overflow:hidden;cursor:pointer;transition:box-shadow .2s,transform .15s}
+.mod-card:hover{box-shadow:0 4px 16px rgba(14,42,71,.09);transform:translateY(-2px)}
+.mod-card-top{padding:16px 18px 12px;display:flex;align-items:flex-start;gap:12px}
+.mod-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px}
+.ic-blue{background:#e6f1fb;color:#1e5fa0}.ic-green{background:#e4f7ee;color:#2cad7f}
+.ic-amber{background:#fdf3e0;color:#d4850a}.ic-red{background:#fdecea;color:#c0392b}
+.ic-purple{background:#f0edfc;color:#6c48c5}.ic-teal{background:#e0f5f0;color:#1a907a}
+.mod-card h4{font-size:13px;font-weight:600;color:#0e2a47;line-height:1.35;margin-bottom:2px}
+.mod-card p{font-size:11px;color:#7a94aa;line-height:1.45}
+.mod-card-foot{padding:10px 18px 13px;border-top:1px solid #f0f4f8;display:flex;align-items:center}
+.mpbar{flex:1;background:#f0f4f8;border-radius:99px;height:5px;margin-right:10px}
+.mpfill{height:5px;border-radius:99px;transition:width .4s}
+.fill-blue{background:#1e5fa0}.fill-green{background:#2cad7f}.fill-amber{background:#d4850a}
+.fill-red{background:#c0392b}.fill-purple{background:#6c48c5}.fill-teal{background:#1a907a}
+.mod-pct{font-size:11px;color:#7a94aa;font-weight:500;min-width:28px;text-align:right;margin-right:8px}
+.chip{font-size:10px;padding:3px 8px;border-radius:99px;font-weight:600}
+.chip-new{background:#e6f1fb;color:#1e5fa0}.chip-prog{background:#fdf3e0;color:#d4850a}
+.chip-done{background:#e4f7ee;color:#2cad7f}.chip-locked{background:#f0f4f8;color:#9ab0c4}
+
+/* ===== LESSONS ===== */
+.lesson-list{display:flex;flex-direction:column;gap:9px}
+.lesson-item{background:#fff;border-radius:10px;border:1px solid #e4ecf3;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s,border-color .2s}
+.lesson-item:hover{background:#f7fafd;border-color:#b8d0e8}
+.lesson-item.active-l{border-color:#1e5fa0;background:#f0f6fc}
+.lnum{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.ln-done{background:#2cad7f;color:#fff}.ln-act{background:#1e5fa0;color:#fff}.ln-def{background:#f0f4f8;color:#7a94aa}
+.l-info{flex:1}.l-name{font-size:13px;font-weight:500;color:#0e2a47}
+.l-meta{font-size:11px;color:#7a94aa;margin-top:2px;display:flex;align-items:center;gap:5px}
+.l-arr{font-size:19px;color:#ccdae7}
+.type-pdf{color:#c0392b}.type-video{color:#1e5fa0}.type-ppt{color:#d4850a}
+.type-doc{color:#2cad7f}.type-link{color:#6c48c5}.type-task{color:#1a907a}.type-quiz{color:#d4850a}
+.course-hdr{background:#fff;border-radius:12px;border:1px solid #e4ecf3;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;gap:16px}
+.big-ico{width:54px;height:54px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.course-hdr h2{font-size:17px;font-weight:600;color:#0e2a47;margin-bottom:4px}
+.course-hdr p{font-size:12px;color:#7a94aa;line-height:1.5}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.tag{font-size:10px;padding:3px 8px;border-radius:99px;background:#f0f4f8;color:#4a6480;font-weight:500}
+
+/* ===== VIEWER / TASK ===== */
+.viewer{background:#fff;border-radius:12px;border:1px solid #e4ecf3;overflow:hidden;margin-bottom:16px}
+.viewer-bar{background:#f7fafd;border-bottom:1px solid #e4ecf3;padding:11px 18px;display:flex;align-items:center;gap:9px}
+.tbadge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px}
+.tb-pdf{background:#fdecea;color:#c0392b}.tb-video{background:#e6f1fb;color:#1e5fa0}
+.tb-ppt{background:#fdf3e0;color:#d4850a}.tb-doc{background:#e4f7ee;color:#2cad7f}
+.tb-link{background:#f0edfc;color:#6c48c5}.tb-task{background:#e0f5f0;color:#1a907a}.tb-quiz{background:#fdf3e0;color:#d4850a}
+.viewer-body{padding:30px 36px;text-align:center;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.vico{font-size:48px;margin-bottom:12px}.vdesc{font-size:15px;color:#0e2a47;font-weight:500;margin-bottom:5px}
+.vsub{font-size:12px;color:#7a94aa;margin-bottom:18px;line-height:1.6;max-width:340px}
+.task-panel{background:#fff;border-radius:12px;border:1px solid #e4ecf3;padding:20px 22px}
+.task-panel h3{font-size:14px;font-weight:600;color:#0e2a47;margin-bottom:3px}
+.task-desc{font-size:12px;color:#7a94aa;margin-bottom:16px;line-height:1.6}
+.task-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.tstep-num{width:24px;height:24px;border-radius:50%;background:#e6f1fb;color:#1e5fa0;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.tstep-txt{font-size:12px;color:#2a3d52;line-height:1.55}
+.upload-zone{border:2px dashed #ccdae7;border-radius:10px;padding:20px;text-align:center;margin-top:16px;cursor:pointer;transition:background .15s,border-color .15s}
+.upload-zone:hover{background:#f7fafd;border-color:#1e5fa0}
+.upload-ico{font-size:26px;color:#b8d0e8;margin-bottom:5px}
+
+/* ===== QUIZ ===== */
+.quiz-wrap{background:#fff;border-radius:12px;border:1px solid #e4ecf3;padding:24px}
+.quiz-header{margin-bottom:20px}
+.quiz-header h3{font-size:16px;font-weight:600;color:#0e2a47;margin-bottom:4px}
+.quiz-header p{font-size:12px;color:#7a94aa}
+.quiz-prog{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.qpbar{flex:1;background:#f0f4f8;border-radius:99px;height:7px}
+.qpfill{background:#1e5fa0;height:7px;border-radius:99px;transition:width .4s}
+.qp-lbl{font-size:12px;color:#7a94aa;min-width:55px;text-align:right}
+.q-num{font-size:11px;font-weight:600;color:#1e5fa0;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.q-text{font-size:14px;font-weight:500;color:#0e2a47;margin-bottom:14px;line-height:1.6}
+.q-options{display:flex;flex-direction:column;gap:8px}
+.q-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:9px;border:1.5px solid #e4ecf3;cursor:pointer;transition:all .15s;user-select:none}
+.q-opt:hover{border-color:#b8d0e8;background:#f7fafd}
+.q-opt.selected{border-color:#1e5fa0;background:#f0f6fc}
+.q-opt.correct{border-color:#2cad7f;background:#e4f7ee}
+.q-opt.wrong{border-color:#c0392b;background:#fdecea}
+.q-opt-mark{width:20px;height:20px;border-radius:50%;border:1.5px solid #ccdae7;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;transition:all .15s}
+.q-opt.selected .q-opt-mark{border-color:#1e5fa0;background:#1e5fa0;color:#fff}
+.q-opt.correct .q-opt-mark{border-color:#2cad7f;background:#2cad7f;color:#fff}
+.q-opt.wrong .q-opt-mark{border-color:#c0392b;background:#c0392b;color:#fff}
+.q-opt-text{font-size:13px;color:#0e2a47}
+.q-explain{margin-top:12px;padding:12px 14px;background:#f7fafd;border-radius:8px;border-left:3px solid #1e5fa0;font-size:12px;color:#4a6480;line-height:1.6;display:none}
+.q-explain.show{display:block}
+.quiz-result{text-align:center;padding:30px 20px}
+.result-score{font-size:42px;font-weight:700;color:#0e2a47;margin-bottom:5px}
+.result-msg{font-size:14px;color:#7a94aa;margin-bottom:20px}
+.result-bar-wrap{background:#f0f4f8;border-radius:99px;height:10px;margin-bottom:8px}
+.result-bar{height:10px;border-radius:99px;transition:width 1s}
+.result-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.rstat{background:#f7fafd;border-radius:8px;padding:12px;text-align:center}
+.rstat-val{font-size:20px;font-weight:600;color:#0e2a47}.rstat-lbl{font-size:11px;color:#7a94aa;margin-top:2px}
+
+/* ===== ADMIN ===== */
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid #e4ecf3;margin-bottom:22px}
+.admin-tab{padding:10px 18px;font-size:13px;font-weight:500;color:#7a94aa;cursor:pointer;border-bottom:2.5px solid transparent;transition:color .15s,border-color .15s;margin-bottom:-1px}
+.admin-tab.active{color:#0e2a47;border-bottom-color:#1e5fa0}
+.atab-panel{display:none}.atab-panel.active{display:block}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;color:#7a94aa;padding:8px 12px;border-bottom:1px solid #e4ecf3;text-transform:uppercase;letter-spacing:.06em}
+.tbl td{padding:10px 12px;border-bottom:1px solid #f0f4f8;font-size:13px;color:#0e2a47;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#f7fafd}
+.tbl-input{background:#f7fafd;border:1px solid #e4ecf3;border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;color:#0e2a47;width:100%}
+.tbl-select{background:#f7fafd;border:1px solid #e4ecf3;border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;color:#0e2a47;cursor:pointer}
+.role-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.role-card{background:#fff;border-radius:12px;border:1px solid #e4ecf3;padding:18px 20px}
+.role-card-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #f0f4f8}
+.role-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.ri-admin{background:#fdecea;color:#c0392b}.ri-qc{background:#e4f7ee;color:#2cad7f}
+.ri-qa{background:#e6f1fb;color:#1e5fa0}.ri-prod{background:#fdf3e0;color:#d4850a}
+.role-name{font-size:14px;font-weight:600;color:#0e2a47}.role-sub{font-size:11px;color:#7a94aa}
+.mod-toggle{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f8fb}
+.mod-toggle:last-child{border-bottom:none}.mod-toggle-name{font-size:12px;color:#2a3d52}
+.toggle-sw{width:34px;height:19px;border-radius:99px;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s}
+.toggle-sw.on{background:#2cad7f}.toggle-sw.off{background:#ccdae7}
+.toggle-sw::after{content:'';position:absolute;top:3px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .2s}
+.toggle-sw.on::after{left:18px}.toggle-sw.off::after{left:3px}
+.prog-mini{display:inline-block;width:80px;height:6px;background:#f0f4f8;border-radius:99px;vertical-align:middle;margin-right:5px;position:relative;top:1px}
+.prog-mini-fill{height:6px;border-radius:99px;background:#1e5fa0}
+.u-av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-right:8px;vertical-align:middle;background:#1e5fa0}
+
+/* ===== UTIL ===== */
+.card{background:#fff;border-radius:12px;border:1px solid #e4ecf3;padding:20px 22px;margin-bottom:16px}
+.btn-row{display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap}
+.alert-success{background:#e4f7ee;border:1px solid #b8e8d4;color:#1a7a5a;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.alert-info{background:#e6f1fb;border:1px solid #b5d4f4;color:#0c447c;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.ann-card{background:#fff;border-radius:10px;border:1px solid #e4ecf3;padding:16px 20px;margin-bottom:12px}
+.ann-hdr{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.ann-title{font-size:14px;font-weight:600;color:#0e2a47}.ann-date{font-size:11px;color:#7a94aa;margin-left:auto}
+.ann-body{font-size:12px;color:#4a6480;line-height:1.65}
+.loader{display:flex;align-items:center;justify-content:center;padding:40px;color:#7a94aa;font-size:14px;gap:10px}
+.hidden{display:none!important}
+.spinning{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ==================== AUTH SCREEN ==================== -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="brand">医疗器械 · QMS培训</div>
+      <h1>质量管理系统培训平台</h1>
+      <p>Medical Device Quality Training Platform</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">登录 Login</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">注册 Register</div>
+    </div>
+    <!-- Login -->
+    <div id="tab-login">
+      <div id="login-err" class="auth-err"></div>
+      <div class="form-group"><label class="form-label">邮箱 Email</label><input type="email" id="login-email" placeholder="your@email.com"></div>
+      <div class="form-group"><label class="form-label">密码 Password</label><input type="password" id="login-pw" placeholder="••••••••"></div>
+      <button class="btn btn-primary" style="margin-top:6px" onclick="doLogin()"><i class="ti ti-login"></i> 登录 Login</button>
+    </div>
+    <!-- Register -->
+    <div id="tab-register" class="hidden">
+      <div id="reg-err" class="auth-err"></div>
+      <div class="form-group"><label class="form-label">姓名 Name</label><input type="text" id="reg-name" placeholder="张小明"></div>
+      <div class="form-row-2">
+        <div class="form-group"><label class="form-label">邮箱 Email</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
+        <div class="form-group"><label class="form-label">密码 Password</label><input type="password" id="reg-pw" placeholder="min 6 chars"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">岗位角色 Role</label>
+          <select id="reg-role">
+            <option value="qc">质量控制员 QC</option>
+            <option value="qa">质量保证员 QA</option>
+            <option value="prod">生产操作员 Prod</option>
+            <option value="admin">管理员 Admin</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">部门 Department</label><input type="text" id="reg-dept" placeholder="品质部"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:6px" onclick="doRegister()"><i class="ti ti-user-plus"></i> 注册 Register</button>
+    </div>
+    <div class="auth-footer">如需帮助请联系培训负责人 · QMS Training Admin</div>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="main-app" class="app hidden">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-sm">医疗器械 · QMS培训</div>
+      <div class="site-title">质量管理系统<br>培训平台</div>
+      <div class="site-sub">Medical Device Quality Training</div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-label"><span>总体进度</span><span id="pct-lbl">0%</span></div>
+      <div class="prog-track"><div class="prog-fill" id="global-bar" style="width:0%"></div></div>
+    </div>
+    <div class="nav-sec" id="sidebar-nav"></div>
+    <div class="nav-bottom">
+      <div class="nav-user">
+        <div class="avatar" id="nav-avatar">?</div>
+        <div>
+          <div class="u-name" id="nav-uname">加载中...</div>
+          <div class="u-role" id="nav-urole"></div>
+          <span class="role-badge rb-qc" id="nav-rbadge"></span>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="退出登录"><i class="ti ti-logout"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title"><i class="ti ti-home"></i> 首页 Home</div>
+      <div class="topbar-meta"><i class="ti ti-calendar"></i> 培训周期：2025年Q2</div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="content" id="view-dashboard">
+      <div class="welcome">
+        <div>
+          <h2 id="welcome-msg">欢迎回来！</h2>
+          <p id="welcome-sub">继续完成您的医疗器械质量管理培训。加油！</p>
+          <div style="margin-top:14px"><button class="btn btn-primary" onclick="continueLearn()"><i class="ti ti-player-play"></i> 继续学习 Continue</button></div>
+        </div>
+        <i class="ti ti-certificate welcome-icon"></i>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-icon si-blue"><i class="ti ti-book"></i></div><div class="stat-val" id="stat-mods">—</div><div class="stat-lbl">课程模块</div></div>
+        <div class="stat"><div class="stat-icon si-green"><i class="ti ti-check"></i></div><div class="stat-val" id="stat-done">—</div><div class="stat-lbl">已完成模块</div></div>
+        <div class="stat"><div class="stat-icon si-amber"><i class="ti ti-clock"></i></div><div class="stat-val" id="stat-tasks">—</div><div class="stat-lbl">待完成任务</div></div>
+        <div class="stat"><div class="stat-icon si-red"><i class="ti ti-calendar-due"></i></div><div class="stat-val">14天</div><div class="stat-lbl">距截止日</div></div>
+      </div>
+      <div class="sec-title"><i class="ti ti-layout-grid"></i> 我的课程模块 My Modules</div>
+      <div class="module-grid" id="dash-module-grid"><div class="loader"><i class="ti ti-loader spinning"></i> 加载中...</div></div>
+    </div>
+
+    <!-- Module -->
+    <div class="content hidden" id="view-module">
+      <div id="mod-hdr-area"></div>
+      <div class="sec-title"><i class="ti ti-list"></i> 课程内容 Lessons</div>
+      <div class="lesson-list" id="lesson-list"></div>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="showView('dashboard')"><i class="ti ti-arrow-left"></i> 返回首页</button></div>
+    </div>
+
+    <!-- Lesson -->
+    <div class="content hidden" id="view-lesson">
+      <div id="lesson-area"></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="back-mod-btn"><i class="ti ti-arrow-left"></i> 返回模块</button>
+        <button class="btn btn-green" id="mark-done-btn"><i class="ti ti-check"></i> 标记完成 Mark Done</button>
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    <div class="content hidden" id="view-quiz">
+      <div id="quiz-area"></div>
+      <div class="btn-row" id="quiz-btn-row">
+        <button class="btn btn-ghost" id="back-quiz-btn"><i class="ti ti-arrow-left"></i> 返回</button>
+        <button class="btn btn-primary" id="quiz-next-btn" onclick="quizNext()" disabled style="opacity:.45"><i class="ti ti-arrow-right"></i> 下一题 Next</button>
+      </div>
+    </div>
+
+    <!-- Announcements -->
+    <div class="content hidden" id="view-announcements">
+      <div class="sec-title"><i class="ti ti-bell"></i> 通知公告</div>
+      <div id="ann-list"><div class="loader"><i class="ti ti-loader spinning"></i> 加载中...</div></div>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="showView('dashboard')"><i class="ti ti-arrow-left"></i> 返回首页</button></div>
+    </div>
+
+    <!-- Admin -->
+    <div class="content hidden" id="view-admin">
+      <div class="card" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+          <div style="width:38px;height:38px;border-radius:10px;background:#fdecea;display:flex;align-items:center;justify-content:center;font-size:18px;color:#c0392b"><i class="ti ti-settings"></i></div>
+          <div><div style="font-size:16px;font-weight:600;color:#0e2a47">管理员控制台 Admin Panel</div><div style="font-size:12px;color:#7a94aa">数据实时同步至 Supabase</div></div>
+        </div>
+        <div class="admin-tabs">
+          <div class="admin-tab active" onclick="switchAdminTab('upload')"><i class="ti ti-upload" style="font-size:13px;margin-right:4px"></i>内容上传</div>
+          <div class="admin-tab" onclick="switchAdminTab('roles')"><i class="ti ti-users" style="font-size:13px;margin-right:4px"></i>角色模块管理</div>
+          <div class="admin-tab" onclick="switchAdminTab('users')"><i class="ti ti-user-check" style="font-size:13px;margin-right:4px"></i>学员进度</div>
+          <div class="admin-tab" onclick="switchAdminTab('announce')"><i class="ti ti-speakerphone" style="font-size:13px;margin-right:4px"></i>发布通知</div>
+        </div>
+
+        <!-- Upload Tab -->
+        <div class="atab-panel active" id="atab-upload">
+          <div class="alert-info"><i class="ti ti-info-circle"></i> 上传培训材料至 Supabase Storage，并分配到对应模块和类型。</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div class="sec-title" style="margin-bottom:0"><i class="ti ti-files"></i> 课程内容列表</div>
+            <button class="btn btn-primary btn-sm" onclick="addLessonRow()"><i class="ti ti-plus"></i> 新增内容</button>
+          </div>
+          <table class="tbl" id="lessons-admin-tbl">
+            <thead><tr><th>内容名称</th><th>类型</th><th>所属模块</th><th>文件/链接</th><th>操作</th></tr></thead>
+            <tbody id="lessons-admin-tbody"><tr><td colspan="5" style="text-align:center;color:#7a94aa;padding:20px">加载中...</td></tr></tbody>
+          </table>
+          <div class="btn-row"><button class="btn btn-green" onclick="saveLessons()"><i class="ti ti-device-floppy"></i> 保存更改 Save</button></div>
+          <div id="upload-msg" class="hidden" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Roles Tab -->
+        <div class="atab-panel" id="atab-roles">
+          <div class="alert-info"><i class="ti ti-info-circle"></i> 为每个岗位角色开启或关闭课程模块，保存后立即生效。</div>
+          <div class="role-grid" id="role-grid"><div class="loader"><i class="ti ti-loader spinning"></i> 加载中...</div></div>
+          <div class="btn-row"><button class="btn btn-green" onclick="saveRoles()"><i class="ti ti-device-floppy"></i> 保存配置 Save</button></div>
+          <div id="role-msg" class="hidden" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="atab-panel" id="atab-users">
+          <div class="sec-title"><i class="ti ti-chart-bar"></i> 学员学习进度</div>
+          <table class="tbl">
+            <thead><tr><th>学员</th><th>角色</th><th>部门</th><th>课程进度</th><th>测验成绩</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="5" style="text-align:center;color:#7a94aa;padding:20px">加载中...</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- Announce Tab -->
+        <div class="atab-panel" id="atab-announce">
+          <div class="sec-title"><i class="ti ti-speakerphone"></i> 发布新通知</div>
+          <div class="form-group"><label class="form-label">标题 Title</label><input type="text" id="ann-title-input" placeholder="通知标题"></div>
+          <div class="form-group"><label class="form-label">内容 Body</label><textarea id="ann-body-input" rows="4" style="background:#f7fafd;border:1px solid #e4ecf3;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;color:#0e2a47;outline:none;width:100%;resize:vertical" placeholder="通知内容..."></textarea></div>
+          <button class="btn btn-green" onclick="publishAnnouncement()"><i class="ti ti-send"></i> 发布通知 Publish</button>
+          <div id="ann-msg" class="hidden" style="margin-top:10px"></div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="showView('dashboard')"><i class="ti ti-arrow-left"></i> 返回首页</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG — 填入你的 Supabase 凭据 =====================
+const SUPABASE_URL = 'https://yylmmtwxtgwwejgcjlhv.supabase.co';       // 替换为你的 Project URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bG1tdHd4dGd3d2VqZ2NqbGh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODM4MTEsImV4cCI6MjA5NjU1OTgxMX0.f54Gz7KGy3lHS_5s6xs53I2cJGQCTYvsK0qBQQWK2iA'; // 替换为你的 anon public key
+// =========================================================================
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const TYPE_ICONS = {pdf:'ti-file-type-pdf',video:'ti-player-play',ppt:'ti-presentation',doc:'ti-file-description',link:'ti-link',task:'ti-checkbox',quiz:'ti-help'};
+const TYPE_LABELS = {pdf:'PDF文档',video:'视频',ppt:'PPT课件',doc:'Word文档',link:'外部链接',task:'实践任务',quiz:'知识测验'};
+const TYPE_BADGES = {pdf:'tb-pdf',video:'tb-video',ppt:'tb-ppt',doc:'tb-doc',link:'tb-link',task:'tb-task',quiz:'tb-quiz'};
+const TYPE_EMOJIS = {pdf:'📄',video:'🎬',ppt:'📊',doc:'📝',link:'🔗',task:'✅',quiz:'📝'};
+const ROLE_LABELS = {admin:'管理员',qc:'质控员 QC',qa:'质保员 QA',prod:'生产员'};
+const ROLE_BADGES = {admin:'rb-admin',qc:'rb-qc',qa:'rb-qa',prod:'rb-prod'};
+const ROLE_COLORS = {admin:'ri-admin',qc:'ri-qc',qa:'ri-qa',prod:'ri-prod'};
+const ROLE_ICONS = {admin:'ti-shield',qc:'ti-microscope',qa:'ti-clipboard-list',prod:'ti-tools'};
+
+// App state
+let currentUser = null;
+let currentProfile = null;
+let allModules = [];
+let allLessons = [];
+let roleAccess = {};     // { moduleId: boolean }
+let roleAccessAll = {};  // { role: { moduleId: boolean } }
+let userProgress = {};   // { lessonId: true }
+let currentModuleId = null;
+let quizQuestions = [], quizCurrent = 0, quizAnswers = [], quizAnswered = false, quizModuleId = null;
+let adminLessonsEdits = [];
+
+// ===================== AUTH =====================
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',['login','register'][i]===tab));
+  document.getElementById('tab-login').classList.toggle('hidden', tab!=='login');
+  document.getElementById('tab-register').classList.toggle('hidden', tab!=='register');
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  const err = document.getElementById('login-err');
+  err.classList.remove('show');
+  const {error} = await sb.auth.signInWithPassword({email, password: pw});
+  if (error) { err.textContent = '登录失败：' + error.message; err.classList.add('show'); }
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pw = document.getElementById('reg-pw').value;
+  const role = document.getElementById('reg-role').value;
+  const dept = document.getElementById('reg-dept').value.trim();
+  const err = document.getElementById('reg-err');
+  err.classList.remove('show');
+  if (!name||!email||!pw) { err.textContent='请填写所有必填字段'; err.classList.add('show'); return; }
+  const {error} = await sb.auth.signUp({
+    email, password: pw,
+    options: { data: { name, role, department: dept } }
+  });
+  if (error) { err.textContent='注册失败：'+error.message; err.classList.add('show'); }
+  else { err.style.background='#e4f7ee';err.style.color='#1a7a5a';err.textContent='✓ 注册成功！请检查邮箱验证后登录。';err.classList.add('show'); }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+}
+
+// ===================== BOOT =====================
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session) {
+    currentUser = session.user;
+    await loadProfile();
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    await loadAllData();
+    buildSidebar();
+    buildDashboard();
+    showView('dashboard');
+  }
+});
+
+async function loadProfile() {
+  const {data} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+}
+
+async function loadAllData() {
+  // Load modules
+  const {data: mods} = await sb.from('modules').select('*').order('sort_order');
+  allModules = mods || [];
+
+  // Load lessons
+  const {data: lessons} = await sb.from('lessons').select('*').order('sort_order');
+  allLessons = lessons || [];
+
+  // Load role access for current user's role
+  const {data: access} = await sb.from('role_module_access').select('*').eq('role', currentProfile.role);
+  roleAccess = {};
+  (access||[]).forEach(a => roleAccess[a.module_id] = a.is_visible);
+
+  // Load user progress
+  const {data: prog} = await sb.from('progress').select('lesson_id').eq('user_id', currentUser.id).eq('completed', true);
+  userProgress = {};
+  (prog||[]).forEach(p => userProgress[p.lesson_id] = true);
+}
+
+function getModuleProgress(moduleId) {
+  const lessons = allLessons.filter(l => l.module_id === moduleId);
+  if (!lessons.length) return 0;
+  const done = lessons.filter(l => userProgress[l.id]).length;
+  return Math.round(done / lessons.length * 100);
+}
+
+function visibleModules() {
+  return allModules.filter(m => roleAccess[m.id] !== false);
+}
+
+// ===================== SIDEBAR =====================
+function buildSidebar() {
+  if (!currentProfile) return;
+  const p = currentProfile;
+  document.getElementById('nav-avatar').textContent = p.name.charAt(0);
+  document.getElementById('nav-uname').textContent = p.name;
+  document.getElementById('nav-urole').textContent = p.department || '';
+  const rb = document.getElementById('nav-rbadge');
+  rb.textContent = ROLE_LABELS[p.role] || p.role;
+  rb.className = 'role-badge ' + (ROLE_BADGES[p.role]||'rb-qc');
+
+  const vis = visibleModules();
+  let html = `
+    <div class="nav-grp">导航 Navigation</div>
+    <div class="nav-item active" id="nav-home" onclick="showView('dashboard')"><i class="ti ti-home ni"></i><span>首页 Home</span></div>
+    <div class="nav-item" onclick="showView('announcements')"><i class="ti ti-bell ni"></i><span>通知 Announcements</span></div>
+    <div class="nav-grp">课程模块 Modules</div>`;
+  vis.forEach(m => {
+    const pct = getModuleProgress(m.id);
+    html += `<div class="nav-item ${pct===100?'done':''}" onclick="openModule(${m.id})"><i class="ti ${m.icon} ni"></i><span class="${pct===100?'nav-text':''}">${m.short_title}</span></div>`;
+  });
+  if (p.role === 'admin') {
+    html += `<div class="nav-grp">管理 Admin</div><div class="nav-item" onclick="openAdmin()"><i class="ti ti-settings ni"></i><span>管理员控制台</span></div>`;
+  }
+  document.getElementById('sidebar-nav').innerHTML = html;
+  updateProgress();
+}
+
+function updateProgress() {
+  const vis = visibleModules();
+  const avg = vis.length ? Math.round(vis.reduce((s,m)=>s+getModuleProgress(m.id),0)/vis.length) : 0;
+  document.getElementById('pct-lbl').textContent = avg+'%';
+  document.getElementById('global-bar').style.width = avg+'%';
+}
+
+// ===================== DASHBOARD =====================
+function buildDashboard() {
+  if (!currentProfile) return;
+  document.getElementById('welcome-msg').textContent = '欢迎回来，' + currentProfile.name + '！';
+  const vis = visibleModules();
+  const done = vis.filter(m=>getModuleProgress(m.id)===100).length;
+  const pendingTasks = allLessons.filter(l=>l.type==='task'&&!userProgress[l.id]&&vis.find(m=>m.id===l.module_id)).length;
+  document.getElementById('stat-mods').textContent = vis.length;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-tasks').textContent = pendingTasks;
+
+  const grid = document.getElementById('dash-module-grid');
+  if (!vis.length) { grid.innerHTML='<div class="loader">暂无分配课程模块</div>'; return; }
+  grid.innerHTML = vis.map(m => {
+    const pct = getModuleProgress(m.id);
+    const chipCls = pct===100?'chip-done':pct>0?'chip-prog':'chip-new';
+    const chipLbl = pct===100?'已完成':pct>0?'进行中':'未开始';
+    return `<div class="mod-card" onclick="openModule(${m.id})">
+      <div class="mod-card-top">
+        <div class="mod-ico ${m.color_class||'ic-blue'}"><i class="ti ${m.icon}"></i></div>
+        <div><h4>${m.title}</h4><p>${m.subtitle||''}</p></div>
+      </div>
+      <div class="mod-card-foot">
+        <div class="mpbar"><div class="mpfill ${m.fill_class||'fill-blue'}" style="width:${pct}%"></div></div>
+        <span class="mod-pct">${pct}%</span>
+        <span class="chip ${chipCls}">${chipLbl}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function continueLearn() {
+  const vis = visibleModules();
+  const m = vis.find(m=>getModuleProgress(m.id)>0&&getModuleProgress(m.id)<100) || vis.find(m=>getModuleProgress(m.id)===0);
+  if (m) openModule(m.id);
+}
+
+// ===================== VIEW =====================
+function showView(name) {
+  ['dashboard','module','lesson','quiz','announcements','admin'].forEach(v=>{
+    document.getElementById('view-'+v)?.classList.add('hidden');
+  });
+  document.getElementById('view-'+name)?.classList.remove('hidden');
+  const icons={dashboard:'ti-home',module:'ti-book',lesson:'ti-file-text',quiz:'ti-help',announcements:'ti-bell',admin:'ti-settings'};
+  const titles={dashboard:'首页 Home',module:'课程模块',lesson:'课程内容',quiz:'知识测验',announcements:'通知公告',admin:'管理员控制台'};
+  document.getElementById('topbar-title').innerHTML=`<i class="ti ${icons[name]||'ti-home'}"></i> ${titles[name]||''}`;
+  if (name==='announcements') loadAnnouncements();
+  if (name==='dashboard') { buildDashboard(); updateProgress(); }
+}
+
+// ===================== MODULE =====================
+function openModule(id) {
+  currentModuleId = id;
+  const m = allModules.find(x=>x.id===id);
+  if (!m) return;
+  const lessons = allLessons.filter(l=>l.module_id===id).sort((a,b)=>a.sort_order-b.sort_order);
+  const tagsHtml = (m.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+  document.getElementById('mod-hdr-area').innerHTML = `
+    <div class="course-hdr">
+      <div class="big-ico ${m.color_class||'ic-blue'}"><i class="ti ${m.icon}"></i></div>
+      <div><h2>${m.title}</h2><p>${m.description||''}</p><div class="tags">${tagsHtml}</div></div>
+    </div>`;
+  document.getElementById('lesson-list').innerHTML = lessons.map((l,i) => {
+    const done = !!userProgress[l.id];
+    const numCls = done?'ln-done':i===0?'ln-act':'ln-def';
+    const numContent = done?'<i class="ti ti-check" style="font-size:12px"></i>':(i+1);
+    return `<div class="lesson-item ${i===0&&!done?'active-l':''}" onclick="openLesson(${id},${l.id})">
+      <div class="lnum ${numCls}">${numContent}</div>
+      <div class="l-info">
+        <div class="l-name">${l.name}</div>
+        <div class="l-meta"><i class="ti ${TYPE_ICONS[l.type]||'ti-file'} type-${l.type}" style="font-size:13px"></i> ${TYPE_LABELS[l.type]||l.type} · ${l.duration_label||''}</div>
+      </div>
+      <i class="ti ti-chevron-right l-arr"></i>
+    </div>`;
+  }).join('');
+  showView('module');
+  document.getElementById('topbar-title').innerHTML=`<i class="ti ${m.icon}"></i> ${m.title}`;
+}
+
+// ===================== LESSON =====================
+function openLesson(moduleId, lessonId) {
+  const l = allLessons.find(x=>x.id===lessonId);
+  if (!l) return;
+  if (l.type==='quiz') { startQuiz(moduleId, lessonId); return; }
+
+  let html = '';
+  if (l.type==='task') {
+    html = `<div class="task-panel">
+      <h3><i class="ti ti-checkbox" style="color:#1a907a;margin-right:6px"></i>${l.name}</h3>
+      <p class="task-desc">请仔细阅读以下任务要求，完成后上传您的作业文件。</p>
+      <div class="task-step"><div class="tstep-num">1</div><div class="tstep-txt">仔细阅读本模块所有学习材料，确保理解核心知识点</div></div>
+      <div class="task-step"><div class="tstep-num">2</div><div class="tstep-txt">按照要求填写作业内容或操作记录表（使用提供的Word模板）</div></div>
+      <div class="task-step"><div class="tstep-num">3</div><div class="tstep-txt">检查内容完整性后上传提交，培训负责人将在3个工作日内反馈</div></div>
+      <div class="upload-zone" onclick="handleFileUpload(${lessonId})">
+        <div class="upload-ico"><i class="ti ti-upload"></i></div>
+        <div style="font-size:12px;color:#7a94aa">点击上传作业文件（支持 .docx / .pdf / .xlsx）<br><small>最大文件大小：20MB</small></div>
+      </div>
+    </div>`;
+  } else {
+    const openLabel = l.type==='link'?'打开链接':l.type==='video'?'播放视频':'下载/查看';
+    const fileBtn = l.file_url ? `<a href="${l.file_url}" target="_blank" class="btn btn-primary"><i class="ti ti-external-link"></i> ${openLabel}</a>` : `<button class="btn btn-ghost" disabled>文件待上传</button>`;
+    html = `<div class="viewer">
+      <div class="viewer-bar">
+        <span class="tbadge ${TYPE_BADGES[l.type]||''}">${TYPE_LABELS[l.type]||l.type}</span>
+        <span style="font-size:13px;color:#4a6480;font-weight:500">${l.name}</span>
+      </div>
+      <div class="viewer-body">
+        <div class="vico">${TYPE_EMOJIS[l.type]||'📄'}</div>
+        <div class="vdesc">${l.name}</div>
+        <div class="vsub">时长/规格：${l.duration_label||'—'}<br>点击下方按钮打开内容</div>
+        ${fileBtn}
+      </div>
+    </div>`;
+  }
+  document.getElementById('lesson-area').innerHTML = html;
+  document.getElementById('back-mod-btn').onclick = () => openModule(moduleId);
+  document.getElementById('mark-done-btn').onclick = () => markDone(moduleId, lessonId);
+  showView('lesson');
+}
+
+async function markDone(moduleId, lessonId) {
+  await sb.from('progress').upsert({user_id: currentUser.id, lesson_id: lessonId, completed: true, completed_at: new Date().toISOString()}, {onConflict:'user_id,lesson_id'});
+  userProgress[lessonId] = true;
+  const btn = document.getElementById('mark-done-btn');
+  btn.innerHTML='<i class="ti ti-check"></i> 已完成！';
+  btn.style.background='#1a907a';
+  updateProgress();
+  setTimeout(() => openModule(moduleId), 700);
+}
+
+async function handleFileUpload(lessonId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.docx,.xlsx';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const path = `submissions/${currentUser.id}/${lessonId}/${file.name}`;
+    const {error} = await sb.storage.from('training-files').upload(path, file, {upsert:true});
+    if (!error) alert('✓ 作业上传成功！培训负责人将在3个工作日内反馈。');
+    else alert('上传失败：' + error.message);
+  };
+  input.click();
+}
+
+// ===================== QUIZ =====================
+async function startQuiz(moduleId, lessonId) {
+  quizModuleId = moduleId;
+  const {data} = await sb.from('quiz_questions').select('*').eq('module_id', moduleId).order('sort_order');
+  quizQuestions = data || [];
+  quizCurrent = 0;
+  quizAnswers = new Array(quizQuestions.length).fill(null);
+  quizAnswered = false;
+  document.getElementById('back-quiz-btn').onclick = () => openModule(moduleId);
+  renderQuizQ();
+  showView('quiz');
+}
+
+function renderQuizQ() {
+  if (quizCurrent >= quizQuestions.length) { renderQuizResult(); return; }
+  const q = quizQuestions[quizCurrent];
+  const total = quizQuestions.length;
+  quizAnswered = quizAnswers[quizCurrent] !== null;
+  document.getElementById('quiz-area').innerHTML = `
+    <div class="quiz-wrap">
+      <div class="quiz-header"><h3>${allModules.find(m=>m.id===quizModuleId)?.short_title||''} — 知识测验</h3><p>共 ${total} 题，答对 60% 以上即为通过。</p></div>
+      <div class="quiz-prog"><div class="qpbar"><div class="qpfill" style="width:${Math.round(quizCurrent/total*100)}%"></div></div><span class="qp-lbl">第 ${quizCurrent+1} / ${total} 题</span></div>
+      <div><div class="q-num">第 ${quizCurrent+1} 题</div>
+      <div class="q-text">${q.question}</div>
+      <div class="q-options">${q.options.map((opt,i)=>{
+        let cls='';
+        if(quizAnswered){if(i===q.correct_answer)cls='correct';else if(i===quizAnswers[quizCurrent])cls='wrong';}
+        else if(quizAnswers[quizCurrent]===i)cls='selected';
+        const mark=cls==='correct'?'<i class="ti ti-check"></i>':cls==='wrong'?'<i class="ti ti-x"></i>':quizAnswers[quizCurrent]===i?'<i class="ti ti-check"></i>':'';
+        return `<div class="q-opt ${cls}" onclick="selectOpt(${i})"><div class="q-opt-mark">${mark}</div><div class="q-opt-text">${String.fromCharCode(65+i)}. ${opt}</div></div>`;
+      }).join('')}</div>
+      <div class="q-explain ${quizAnswered?'show':''}">${q.explanation||''}</div></div>
+    </div>`;
+  const nb=document.getElementById('quiz-next-btn');
+  nb.innerHTML = quizCurrent===total-1?'<i class="ti ti-award"></i> 查看结果':'<i class="ti ti-arrow-right"></i> 下一题 Next';
+  nb.disabled = !quizAnswered; nb.style.opacity = quizAnswered?'1':'0.45';
+}
+
+function selectOpt(idx) {
+  if(quizAnswered) return;
+  quizAnswers[quizCurrent]=idx; quizAnswered=true;
+  const nb=document.getElementById('quiz-next-btn'); nb.disabled=false; nb.style.opacity='1';
+  renderQuizQ();
+}
+
+function quizNext() {
+  if(!quizAnswered) return;
+  quizCurrent++;
+  if(quizCurrent>=quizQuestions.length){renderQuizResult();return;}
+  quizAnswered=quizAnswers[quizCurrent]!==null;
+  renderQuizQ();
+}
+
+async function renderQuizResult() {
+  const total=quizQuestions.length;
+  const correct=quizAnswers.filter((a,i)=>a===quizQuestions[i].correct_answer).length;
+  const pct=Math.round(correct/total*100);
+  const pass=pct>=60;
+  await sb.from('quiz_results').insert({user_id:currentUser.id,module_id:quizModuleId,score:pct,total,passed:pass});
+  if(pass){
+    const ql=allLessons.find(l=>l.module_id===quizModuleId&&l.type==='quiz');
+    if(ql) await markDoneQuiet(ql.id);
+  }
+  document.getElementById('quiz-btn-row').innerHTML=`
+    <button class="btn btn-ghost" onclick="openModule(${quizModuleId})"><i class="ti ti-arrow-left"></i> 返回模块</button>
+    ${!pass?`<button class="btn btn-primary" onclick="startQuiz(${quizModuleId},null)"><i class="ti ti-refresh"></i> 重新测验</button>`:''}`;
+  document.getElementById('quiz-area').innerHTML=`
+    <div class="quiz-wrap"><div class="quiz-result">
+      <div style="font-size:52px;margin-bottom:14px">${pass?'🎉':'📚'}</div>
+      <div class="result-score">${pct}<span style="font-size:22px;color:#7a94aa">%</span></div>
+      <div class="result-msg">${pass?'恭喜！测验通过 Passed ✓':'未达到通过标准（60%），请复习后重新测验'}</div>
+      <div class="result-bar-wrap"><div class="result-bar" style="width:${pct}%;background:${pass?'#2cad7f':'#d4850a'}"></div></div>
+      <div style="font-size:11px;color:#7a94aa;margin-bottom:16px">通过线 60%</div>
+      <div class="result-stats">
+        <div class="rstat"><div class="rstat-val" style="color:#2cad7f">${correct}</div><div class="rstat-lbl">答对</div></div>
+        <div class="rstat"><div class="rstat-val" style="color:#c0392b">${total-correct}</div><div class="rstat-lbl">答错</div></div>
+        <div class="rstat"><div class="rstat-val">${total}</div><div class="rstat-lbl">总题数</div></div>
+      </div>
+    </div></div>`;
+}
+
+async function markDoneQuiet(lessonId) {
+  await sb.from('progress').upsert({user_id:currentUser.id,lesson_id:lessonId,completed:true,completed_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});
+  userProgress[lessonId]=true; updateProgress();
+}
+
+// ===================== ANNOUNCEMENTS =====================
+async function loadAnnouncements() {
+  const {data} = await sb.from('announcements').select('*').order('published_at',{ascending:false});
+  const list = document.getElementById('ann-list');
+  if(!data||!data.length){list.innerHTML='<div class="loader">暂无通知</div>';return;}
+  list.innerHTML=data.map(a=>`
+    <div class="ann-card">
+      <div class="ann-hdr"><i class="ti ${a.icon||'ti-bell'}" style="font-size:17px;color:#d4850a"></i><span class="ann-title">${a.title}</span><span class="ann-date">${new Date(a.published_at).toLocaleDateString('zh-CN')}</span></div>
+      <div class="ann-body">${a.body}</div>
+    </div>`).join('');
+}
+
+// ===================== ADMIN =====================
+async function openAdmin() {
+  showView('admin');
+  await loadAdminData();
+}
+
+async function loadAdminData() {
+  // All role access
+  const {data:acc} = await sb.from('role_module_access').select('*');
+  roleAccessAll={};
+  (acc||[]).forEach(a=>{
+    if(!roleAccessAll[a.role]) roleAccessAll[a.role]={};
+    roleAccessAll[a.role][a.module_id]=a.is_visible;
+  });
+  buildRoleGrid();
+
+  // Lessons for admin
+  adminLessonsEdits = JSON.parse(JSON.stringify(allLessons));
+  buildLessonsAdmin();
+
+  // Users
+  const {data:profiles} = await sb.from('profiles').select('*');
+  const {data:qresults} = await sb.from('quiz_results').select('*');
+  const {data:prog} = await sb.from('progress').select('*').eq('completed',true);
+  buildUsersTable(profiles||[], qresults||[], prog||[]);
+}
+
+function switchAdminTab(name) {
+  document.querySelectorAll('.admin-tab').forEach((t,i)=>{
+    const tabs=['upload','roles','users','announce'];
+    t.classList.toggle('active',tabs[i]===name);
+  });
+  document.querySelectorAll('.atab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('atab-'+name).classList.add('active');
+}
+
+// --- Lessons admin ---
+function buildLessonsAdmin() {
+  const mods = allModules;
+  document.getElementById('lessons-admin-tbody').innerHTML = adminLessonsEdits.map((l,i)=>`
+    <tr>
+      <td><input class="tbl-input" value="${l.name}" onchange="adminLessonsEdits[${i}].name=this.value" style="min-width:160px"></td>
+      <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].type=this.value">
+        ${Object.keys(TYPE_LABELS).map(t=>`<option value="${t}" ${l.type===t?'selected':''}>${TYPE_LABELS[t]}</option>`).join('')}
+      </select></td>
+      <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].module_id=parseInt(this.value)">
+        ${mods.map(m=>`<option value="${m.id}" ${l.module_id===m.id?'selected':''}>${m.short_title}</option>`).join('')}
+      </select></td>
+      <td><input class="tbl-input" value="${l.file_url||''}" placeholder="URL 或留空" onchange="adminLessonsEdits[${i}].file_url=this.value" style="min-width:160px"></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteLessonRow(${i})"><i class="ti ti-trash"></i></button></td>
+    </tr>`).join('');
+}
+
+function addLessonRow() {
+  adminLessonsEdits.push({id:null,name:'新内容',type:'pdf',module_id:allModules[0]?.id||1,file_url:'',sort_order:999,duration_label:''});
+  buildLessonsAdmin();
+}
+
+function deleteLessonRow(i) { adminLessonsEdits.splice(i,1); buildLessonsAdmin(); }
+
+async function saveLessons() {
+  const msg = document.getElementById('upload-msg');
+  for (const l of adminLessonsEdits) {
+    if (l.id) {
+      await sb.from('lessons').update({name:l.name,type:l.type,module_id:l.module_id,file_url:l.file_url}).eq('id',l.id);
+    } else {
+      const {data} = await sb.from('lessons').insert({name:l.name,type:l.type,module_id:l.module_id,file_url:l.file_url,sort_order:l.sort_order||999}).select().single();
+      if(data) l.id=data.id;
+    }
+  }
+  allLessons = JSON.parse(JSON.stringify(adminLessonsEdits));
+  msg.className='alert-success'; msg.innerHTML='<i class="ti ti-check"></i> 内容已保存至 Supabase！'; msg.classList.remove('hidden');
+  setTimeout(()=>msg.classList.add('hidden'),3000);
+}
+
+// --- Role grid ---
+function buildRoleGrid() {
+  const roles=['admin','qc','qa','prod'];
+  const roleNames={admin:'管理员 Admin',qc:'质量控制员 QC',qa:'质量保证员 QA',prod:'生产操作员 Prod'};
+  const roleSubs={admin:'培训管理部门',qc:'品质检验部',qa:'质量体系部',prod:'生产制造部'};
+  document.getElementById('role-grid').innerHTML=roles.map(rk=>`
+    <div class="role-card">
+      <div class="role-card-hdr">
+        <div class="role-ico ${ROLE_COLORS[rk]}"><i class="ti ${ROLE_ICONS[rk]}"></i></div>
+        <div><div class="role-name">${roleNames[rk]}</div><div class="role-sub">${roleSubs[rk]}</div></div>
+      </div>
+      ${allModules.map(m=>{
+        const on = (roleAccessAll[rk]||{})[m.id]!==false;
+        return `<div class="mod-toggle">
+          <span class="mod-toggle-name"><i class="ti ${m.icon}" style="font-size:12px;margin-right:5px;color:#7a94aa"></i>${m.short_title}</span>
+          <div class="toggle-sw ${on?'on':'off'}" onclick="toggleRole('${rk}',${m.id},this)"></div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+function toggleRole(role,modId,el) {
+  if(!roleAccessAll[role]) roleAccessAll[role]={};
+  roleAccessAll[role][modId]=!roleAccessAll[role][modId];
+  el.className='toggle-sw '+(roleAccessAll[role][modId]?'on':'off');
+}
+
+async function saveRoles() {
+  const msg=document.getElementById('role-msg');
+  const roles=['admin','qc','qa','prod'];
+  for(const rk of roles){
+    for(const m of allModules){
+      const vis=(roleAccessAll[rk]||{})[m.id]!==false;
+      await sb.from('role_module_access').upsert({role:rk,module_id:m.id,is_visible:vis},{onConflict:'role,module_id'});
+    }
+  }
+  // Reload for current user
+  const {data:access}=await sb.from('role_module_access').select('*').eq('role',currentProfile.role);
+  roleAccess={};
+  (access||[]).forEach(a=>roleAccess[a.module_id]=a.is_visible);
+  buildSidebar(); buildDashboard();
+  msg.className='alert-success'; msg.innerHTML='<i class="ti ti-check"></i> 角色权限已保存！'; msg.classList.remove('hidden');
+  setTimeout(()=>msg.classList.add('hidden'),3000);
+}
+
+// --- Users table ---
+function buildUsersTable(profiles, qresults, prog) {
+  const roleNames={admin:'管理员',qc:'质控员',qa:'质保员',prod:'生产员'};
+  document.getElementById('users-tbody').innerHTML=profiles.map(p=>{
+    const myProg=prog.filter(x=>x.user_id===p.id).length;
+    const myResult=qresults.filter(x=>x.user_id===p.id).sort((a,b)=>new Date(b.taken_at)-new Date(a.taken_at))[0];
+    const pct=allLessons.length?Math.round(myProg/allLessons.length*100):0;
+    const chipCls=pct===100?'chip-done':pct>0?'chip-prog':'chip-new';
+    return `<tr>
+      <td><span class="u-av">${p.name.charAt(0)}</span>${p.name}</td>
+      <td><span class="chip ${chipCls}" style="background:#f0f4f8;color:#4a6480">${roleNames[p.role]||p.role}</span></td>
+      <td>${p.department||'—'}</td>
+      <td><span class="prog-mini"><span class="prog-mini-fill" style="width:${pct}%"></span></span>${pct}%</td>
+      <td>${myResult?myResult.score+'分 '+(myResult.passed?'✓':'✗'):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// --- Publish announcement ---
+async function publishAnnouncement() {
+  const title=document.getElementById('ann-title-input').value.trim();
+  const body=document.getElementById('ann-body-input').value.trim();
+  const msg=document.getElementById('ann-msg');
+  if(!title||!body){msg.className='alert-info';msg.innerHTML='<i class="ti ti-info-circle"></i> 请填写标题和内容';msg.classList.remove('hidden');return;}
+  await sb.from('announcements').insert({title,body,icon:'ti-bell',created_by:currentUser.id});
+  document.getElementById('ann-title-input').value='';
+  document.getElementById('ann-body-input').value='';
+  msg.className='alert-success';msg.innerHTML='<i class="ti ti-check"></i> 通知已发布！';msg.classList.remove('hidden');
+  setTimeout(()=>msg.classList.add('hidden'),3000);
+}
+</script>
+</body>
+</html>
