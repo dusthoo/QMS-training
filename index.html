@@ -460,11 +460,26 @@ let currentModuleId = null;
 let quizQuestions = [], quizCurrent = 0, quizAnswers = [], quizAnswered = false, quizModuleId = null;
 let adminLessonsEdits = [];
 
+
+
 // ===================== AUTH =====================
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',['login','register'][i]===tab));
   document.getElementById('tab-login').classList.toggle('hidden', tab!=='login');
   document.getElementById('tab-register').classList.toggle('hidden', tab!=='register');
+}
+
+async function bootApp(user) {
+  currentUser = null; currentProfile = null;
+  allModules = []; allLessons = []; roleAccess = {}; userProgress = {};
+  currentUser = user;
+  await loadProfile();
+  await loadAllData();
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  buildSidebar();
+  buildDashboard();
+  showView('dashboard');
 }
 
 async function doLogin() {
