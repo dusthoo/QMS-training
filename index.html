@@ -479,9 +479,7 @@ async function doLogin() {
   let data, error;
   try {
     ({ data, error } = await sb.auth.signInWithPassword({email, password: pw}));
-    console.log('[Login] data:', data, 'error:', error);
   } catch(e) {
-    console.error('[Login] exception:', e);
     error = e;
   }
   btn.innerHTML = '<i class="ti ti-login"></i> 登录 Login';
@@ -490,14 +488,17 @@ async function doLogin() {
     let msg = '登录失败：' + error.message;
     if (error.message.includes('Invalid login') || error.message.includes('invalid_credentials')) msg = '邮箱或密码错误，请重试';
     if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed')) msg = '⚠️ 无法连接 Supabase，请确认 URL 和 Key 已正确填写';
-    err.textContent = msg;
-    err.classList.add('show');
-  } else if (!data?.session) {
-    err.textContent = '⚠️ 登录无响应，请打开浏览器控制台（F12）查看错误详情';
-    err.classList.add('show');
+    err.textContent = msg; err.classList.add('show');
+  } else if (data && data.session) {
+    try {
+      await bootApp(data.session.user);
+    } catch(e) {
+      err.textContent = '加载失败：' + e.message; err.classList.add('show');
+    }
+  } else {
+    err.textContent = '⚠️ 登录无响应，请刷新页面重试'; err.classList.add('show');
   }
 }
-
 async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
@@ -506,75 +507,33 @@ async function doRegister() {
   const dept = document.getElementById('reg-dept').value.trim();
   const err = document.getElementById('reg-err');
   const btn = document.querySelector('#tab-register .btn-primary');
-  err.classList.remove('show');
-  err.style.background = ''; err.style.color = '';
+  err.classList.remove('show'); err.style.background=''; err.style.color='';
   if (!name||!email||!pw) { err.textContent='请填写所有必填字段'; err.classList.add('show'); return; }
   if (pw.length < 6) { err.textContent='密码至少需要6个字符'; err.classList.add('show'); return; }
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 注册中...';
   btn.disabled = true;
-  const {error} = await sb.auth.signUp({
+  const {data: signUpData, error: signUpErr} = await sb.auth.signUp({
     email, password: pw,
     options: { data: { name, role, department: dept } }
   });
   btn.innerHTML = '<i class="ti ti-user-plus"></i> 注册 Register';
   btn.disabled = false;
-  if (error) {
-    let msg = '注册失败：' + error.message;
-    if (error.message.includes('fetch') || error.message.includes('network')) msg = '⚠️ 无法连接服务器，请检查 SUPABASE_URL 和 SUPABASE_ANON_KEY 是否已正确填写';
-    if (error.message.includes('already registered')) msg = '该邮箱已注册，请直接登录';
+  if (signUpErr) {
+    let msg = '注册失败：' + signUpErr.message;
+    if (signUpErr.message.includes('already registered')) msg = '该邮箱已注册，请直接登录';
     err.textContent = msg; err.classList.add('show');
+    return;
+  }
+  err.style.background='#e4f7ee'; err.style.color='#1a7a5a';
+  err.textContent='✓ 注册成功！正在进入...'; err.classList.add('show');
+  if (signUpData && signUpData.session) {
+    await bootApp(signUpData.session.user);
   } else {
-    err.style.background='#e4f7ee'; err.style.color='#1a7a5a';
-    err.textContent='✓ 注册成功！正在跳转...'; err.classList.add('show');
-    // Auto-login after register (works when email confirm is disabled)
-    await sb.auth.signInWithPassword({email, password: pw});
+    // Email confirm is off but no session returned — try signing in
+    const {data: loginData} = await sb.auth.signInWithPassword({email, password: pw});
+    if (loginData && loginData.session) await bootApp(loginData.session.user);
   }
 }
-
-async function doLogout() {
-  await sb.auth.signOut();
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('main-app').classList.add('hidden');
-}
-
-// ===================== BOOT =====================
-let _booting = false;
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    if (_booting) return;          // prevent double-trigger
-    _booting = true;
-    // Reset all state on every fresh login
-    currentUser = null; currentProfile = null;
-    allModules = []; allLessons = []; roleAccess = {};
-    userProgress = {};
-    try {
-      currentUser = session.user;
-      await loadProfile();
-      await loadAllData();
-      document.getElementById('auth-screen').classList.add('hidden');
-      document.getElementById('main-app').classList.remove('hidden');
-      buildSidebar();
-      buildDashboard();
-      showView('dashboard');
-    } catch(e) {
-      console.error('[Boot] FAILED:', e.message, e.stack);
-      document.getElementById('auth-screen').classList.remove('hidden');
-      document.getElementById('main-app').classList.add('hidden');
-      var err = document.getElementById('login-err');
-      if (err) { err.textContent = '加载失败：' + e.message; err.classList.add('show'); }
-    } finally {
-      _booting = false;
-    }
-  } else if (event === 'SIGNED_OUT') {
-    // Clear everything on logout
-    currentUser = null; currentProfile = null;
-    allModules = []; allLessons = []; roleAccess = {};
-    userProgress = {}; _booting = false;
-    document.getElementById('auth-screen').classList.remove('hidden');
-    document.getElementById('main-app').classList.add('hidden');
-  }
-});
-
 async function loadProfile() {
   const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   if (data) {
