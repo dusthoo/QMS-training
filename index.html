@@ -370,12 +370,30 @@ input:focus,select:focus{border-color:#1e5fa0}
           <div class="admin-tab active" onclick="switchAdminTab('upload')"><i class="ti ti-upload" style="font-size:13px;margin-right:4px"></i>内容上传</div>
           <div class="admin-tab" onclick="switchAdminTab('roles')"><i class="ti ti-users" style="font-size:13px;margin-right:4px"></i>角色模块管理</div>
           <div class="admin-tab" onclick="switchAdminTab('users')"><i class="ti ti-user-check" style="font-size:13px;margin-right:4px"></i>学员进度</div>
+          <div class="admin-tab" onclick="switchAdminTab('quiz')"><i class="ti ti-help" style="font-size:13px;margin-right:4px"></i>题目管理</div>
           <div class="admin-tab" onclick="switchAdminTab('announce')"><i class="ti ti-speakerphone" style="font-size:13px;margin-right:4px"></i>发布通知</div>
         </div>
 
         <!-- Upload Tab -->
         <div class="atab-panel active" id="atab-upload">
-          <div class="alert-info"><i class="ti ti-info-circle"></i> 上传培训材料至 Supabase Storage，并分配到对应模块和类型。</div>
+          <div style="background:#f0f6fc;border:1px solid #b5d4f4;border-radius:10px;padding:16px 18px;margin-bottom:16px">
+  <div style="font-size:13px;font-weight:600;color:#0e2a47;margin-bottom:10px"><i class="ti ti-info-circle" style="color:#1e5fa0;margin-right:6px"></i>如何上传培训资料 — 三步完成</div>
+  <div style="display:flex;gap:0;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:#fff;border-radius:8px;margin:4px;border:1px solid #e4ecf3">
+      <div style="font-size:11px;font-weight:700;color:#1e5fa0;margin-bottom:4px">① 新增一行内容</div>
+      <div style="font-size:12px;color:#4a6480">点击右上角「新增内容」，填写名称、选择类型和模块</div>
+    </div>
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:#fff;border-radius:8px;margin:4px;border:1px solid #e4ecf3">
+      <div style="font-size:11px;font-weight:700;color:#1e5fa0;margin-bottom:4px">② 上传文件</div>
+      <div style="font-size:12px;color:#4a6480">点击「📎 上传文件」按钮选择本地文件，自动上传并填入链接</div>
+    </div>
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:#fff;border-radius:8px;margin:4px;border:1px solid #e4ecf3">
+      <div style="font-size:11px;font-weight:700;color:#1e5fa0;margin-bottom:4px">③ 设置下载权限并保存</div>
+      <div style="font-size:12px;color:#4a6480">PDF/Word/PPT可设置「允许下载」开关，最后点击「保存更改」</div>
+    </div>
+  </div>
+  <div style="margin-top:10px;font-size:11px;color:#7a94aa"><i class="ti ti-link" style="margin-right:4px"></i>也可直接在「文件链接」列粘贴外部URL（腾讯视频、企业网盘等链接）</div>
+</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <div class="sec-title" style="margin-bottom:0"><i class="ti ti-files"></i> 课程内容列表</div>
             <button class="btn btn-primary btn-sm" onclick="addLessonRow()"><i class="ti ti-plus"></i> 新增内容</button>
@@ -403,6 +421,23 @@ input:focus,select:focus{border-color:#1e5fa0}
             <thead><tr><th>学员</th><th>角色</th><th>部门</th><th>课程进度</th><th>测验成绩</th></tr></thead>
             <tbody id="users-tbody"><tr><td colspan="5" style="text-align:center;color:#7a94aa;padding:20px">加载中...</td></tr></tbody>
           </table>
+        </div>
+
+        <!-- Quiz Manager Tab -->
+        <div class="atab-panel" id="atab-quiz">
+          <div class="alert-info"><i class="ti ti-info-circle"></i> 在此新增、修改或删除各模块的测验题目，修改后立即保存至数据库。</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="sec-title" style="margin-bottom:0"><i class="ti ti-help"></i> 选择模块</div>
+            <select class="tbl-select" id="quiz-module-select" onchange="loadQuizMgr()" style="min-width:180px">
+              <option value="">-- 选择模块 --</option>
+            </select>
+          </div>
+          <div id="quiz-mgr-area"><div style="color:#7a94aa;font-size:13px;padding:20px 0">← 请先选择一个模块</div></div>
+          <div class="btn-row" id="quiz-mgr-btns" style="display:none">
+            <button class="btn btn-primary btn-sm" onclick="addQuizQuestion()"><i class="ti ti-plus"></i> 新增题目</button>
+            <button class="btn btn-green" onclick="saveQuizMgr()"><i class="ti ti-device-floppy"></i> 保存题目</button>
+          </div>
+          <div id="quiz-mgr-msg" class="hidden" style="margin-top:10px"></div>
         </div>
 
         <!-- Announce Tab -->
@@ -525,11 +560,19 @@ async function doRegister() {
   err.classList.remove('show'); err.style.background=''; err.style.color='';
   if (!name||!email||!pw) { err.textContent='请填写所有必填字段'; err.classList.add('show'); return; }
   if (pw.length < 6) { err.textContent='密码至少需要6个字符'; err.classList.add('show'); return; }
+
+  // ── Admin email whitelist ──
+  const ADMIN_EMAILS = ['huyichen@reunionmed.com'];
+  const actualRole = role === 'admin' && !ADMIN_EMAILS.includes(email.toLowerCase())
+    ? (() => { err.textContent='该邮箱无权注册为管理员，请选择其他角色'; err.classList.add('show'); btn.innerHTML='<i class="ti ti-user-plus"></i> 注册 Register'; btn.disabled=false; return null; })()
+    : role;
+  if (actualRole === null) return;
+
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 注册中...';
   btn.disabled = true;
   const {data: signUpData, error: signUpErr} = await sb.auth.signUp({
     email, password: pw,
-    options: { data: { name, role, department: dept } }
+    options: { data: { name, role: actualRole, department: dept } }
   });
   btn.innerHTML = '<i class="ti ti-user-plus"></i> 注册 Register';
   btn.disabled = false;
@@ -925,11 +968,12 @@ async function loadAdminData() {
 
 function switchAdminTab(name) {
   document.querySelectorAll('.admin-tab').forEach((t,i)=>{
-    const tabs=['upload','roles','users','announce'];
+    const tabs=['upload','roles','users','quiz','announce'];
     t.classList.toggle('active',tabs[i]===name);
   });
   document.querySelectorAll('.atab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('atab-'+name).classList.add('active');
+  if (name === 'quiz') initQuizMgrTab();
 }
 
 // --- Lessons admin ---
@@ -938,31 +982,102 @@ const DOWNLOADABLE_TYPES = new Set(['pdf','doc','ppt']);
 
 function downloadToggleHtml(i, l) {
   if (!DOWNLOADABLE_TYPES.has(l.type)) {
-    return `<td style="text-align:center"><span style="font-size:11px;color:#b8d0e8">—</span></td>`;
+    return `<td style="text-align:center;font-size:11px;color:#b8d0e8">—</td>`;
   }
   const on = !!l.allow_download;
-  return `<td style="text-align:center">
-    <div class="toggle-sw ${on?'on':'off'}" style="margin:0 auto"
-         onclick="adminLessonsEdits[${i}].allow_download=!adminLessonsEdits[${i}].allow_download;this.className='toggle-sw '+(adminLessonsEdits[${i}].allow_download?'on':'off')">
+  return `<td>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div class="toggle-sw ${on?'on':'off'}" style="margin:0 auto"
+           onclick="adminLessonsEdits[${i}].allow_download=!adminLessonsEdits[${i}].allow_download;this.className='toggle-sw '+(adminLessonsEdits[${i}].allow_download?'on':'off');this.nextElementSibling.textContent=adminLessonsEdits[${i}].allow_download?'可下载':'仅查看'">
+      </div>
+      <span style="font-size:10px;color:${on?'#2cad7f':'#9ab0c4'}">${on?'可下载':'仅查看'}</span>
     </div>
   </td>`;
 }
 
 function buildLessonsAdmin() {
   const mods = allModules;
-  document.getElementById('lessons-admin-tbody').innerHTML = adminLessonsEdits.map((l,i)=>`
-    <tr>
-      <td><input class="tbl-input" value="${l.name}" onchange="adminLessonsEdits[${i}].name=this.value" style="min-width:160px"></td>
+  document.getElementById('lessons-admin-tbody').innerHTML = adminLessonsEdits.map((l,i)=>{
+    const hasFile = l.file_url && l.file_url.length > 0;
+    const isLink = l.type === 'link';
+    const isQuizTask = l.type === 'quiz' || l.type === 'task';
+    const fileCell = isQuizTask
+      ? `<td><span style="font-size:11px;color:#b8d0e8">无需文件</span></td>`
+      : `<td>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            ${hasFile
+              ? `<span style="font-size:11px;color:#2cad7f;display:flex;align-items:center;gap:3px;flex:1;min-width:0;overflow:hidden">
+                   <i class="ti ti-circle-check" style="flex-shrink:0"></i>
+                   <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px" title="${l.file_url||''}">${(l.file_url||'').replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/training-files\//,'📄 ').substring(0,40)}${(l.file_url||'').length>40?'…':''}</span>
+                 </span>`
+              : `<span style="font-size:11px;color:#ccdae7;flex:1">${isLink?'请填写链接URL':'未上传'}</span>`
+            }
+            ${isLink
+              ? `<input class="tbl-input" value="${l.file_url||''}" placeholder="https://..." onchange="adminLessonsEdits[${i}].file_url=this.value" style="min-width:160px;font-size:11px">`
+              : `<button class="btn btn-ghost btn-sm" onclick="adminUploadFile(${i})" style="font-size:11px;white-space:nowrap;flex-shrink:0">
+                   <i class="ti ti-upload"></i> ${hasFile?'重新上传':'📎 上传文件'}
+                 </button>`
+            }
+          </div>
+        </td>`;
+    return `<tr>
+      <td><input class="tbl-input" value="${l.name}" onchange="adminLessonsEdits[${i}].name=this.value" style="min-width:140px"></td>
       <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].type=this.value;buildLessonsAdmin()">
         ${Object.keys(TYPE_LABELS).map(t=>`<option value="${t}" ${l.type===t?'selected':''}>${TYPE_LABELS[t]}</option>`).join('')}
       </select></td>
       <td><select class="tbl-select" onchange="adminLessonsEdits[${i}].module_id=parseInt(this.value)">
         ${mods.map(m=>`<option value="${m.id}" ${l.module_id===m.id?'selected':''}>${m.short_title}</option>`).join('')}
       </select></td>
-      <td><input class="tbl-input" value="${l.file_url||''}" placeholder="URL 或留空" onchange="adminLessonsEdits[${i}].file_url=this.value" style="min-width:160px"></td>
+      ${fileCell}
       ${downloadToggleHtml(i, l)}
       <td><button class="btn btn-danger btn-sm" onclick="deleteLessonRow(${i})"><i class="ti ti-trash"></i></button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+}
+
+// Admin uploads a file directly to Supabase Storage and fills in the URL
+async function adminUploadFile(rowIdx) {
+  const l = adminLessonsEdits[rowIdx];
+  const accept = l.type === 'pdf' ? '.pdf' :
+                 l.type === 'doc' ? '.doc,.docx' :
+                 l.type === 'ppt' ? '.ppt,.pptx' :
+                 l.type === 'video' ? '.mp4,.mov,.avi,.webm' :
+                 '*/*';
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = accept;
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show uploading state
+    const uploadingMsg = document.getElementById('upload-msg');
+    uploadingMsg.className = 'alert-info';
+    uploadingMsg.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 正在上传 ' + file.name + '，请稍候...';
+    uploadingMsg.classList.remove('hidden');
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._一-鿿-]/g, '_');
+    const path = 'materials/' + (l.module_id || 'general') + '/' + Date.now() + '_' + safeName;
+
+    const {data, error} = await sb.storage.from('training-files').upload(path, file, {upsert: true});
+
+    if (error) {
+      uploadingMsg.className = 'alert-info';
+      uploadingMsg.innerHTML = '<i class="ti ti-alert-circle" style="color:#c0392b"></i> 上传失败：' + error.message + '<br><small style="color:#7a94aa">提示：请确认 Supabase Storage 的 training-files 存储桶已设为公开（Public）</small>';
+      return;
+    }
+
+    // Get public URL
+    const { data: urlData } = sb.storage.from('training-files').getPublicUrl(path);
+    adminLessonsEdits[rowIdx].file_url = urlData.publicUrl;
+
+    uploadingMsg.className = 'alert-success';
+    uploadingMsg.innerHTML = '<i class="ti ti-check"></i> 文件上传成功！请点击「保存更改」使链接生效。';
+    setTimeout(() => uploadingMsg.classList.add('hidden'), 5000);
+
+    buildLessonsAdmin(); // refresh table to show new file name
+  };
+  input.click();
 }
 
 function addLessonRow() {
@@ -1049,6 +1164,122 @@ function buildUsersTable(profiles, qresults, prog) {
       <td>${myResult?myResult.score+'分 '+(myResult.passed?'✓':'✗'):'—'}</td>
     </tr>`;
   }).join('');
+}
+
+// --- Quiz Manager ---
+let quizMgrQuestions = []; // editable copy for current module
+let quizMgrModuleId = null;
+
+function initQuizMgrTab() {
+  // Populate module selector
+  const sel = document.getElementById('quiz-module-select');
+  sel.innerHTML = '<option value="">-- 选择模块 --</option>' +
+    allModules.map(m => `<option value="${m.id}">${m.short_title}</option>`).join('');
+}
+
+async function loadQuizMgr() {
+  const sel = document.getElementById('quiz-module-select');
+  const moduleId = parseInt(sel.value);
+  if (!moduleId) return;
+  quizMgrModuleId = moduleId;
+  document.getElementById('quiz-mgr-area').innerHTML =
+    '<div class="loader"><i class="ti ti-loader spinning"></i> 加载题目...</div>';
+  document.getElementById('quiz-mgr-btns').style.display = 'none';
+
+  const {data} = await sb.from('quiz_questions')
+    .select('*').eq('module_id', moduleId).order('sort_order');
+  quizMgrQuestions = (data || []).map(q => ({...q})); // deep copy
+  renderQuizMgr();
+  document.getElementById('quiz-mgr-btns').style.display = 'flex';
+}
+
+function renderQuizMgr() {
+  const area = document.getElementById('quiz-mgr-area');
+  if (!quizMgrQuestions.length) {
+    area.innerHTML = '<div style="color:#7a94aa;font-size:13px;padding:16px 0">该模块暂无题目，点击「新增题目」添加。</div>';
+    return;
+  }
+  area.innerHTML = quizMgrQuestions.map((q, qi) => `
+    <div style="background:#f7fafd;border-radius:10px;border:1px solid #e4ecf3;padding:16px 18px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:700;color:#1e5fa0;background:#e6f1fb;padding:3px 10px;border-radius:99px">第 ${qi+1} 题</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteQuizQuestion(${qi})" style="font-size:11px">
+          <i class="ti ti-trash"></i> 删除
+        </button>
+      </div>
+      <div style="margin-bottom:8px">
+        <label class="form-label" style="font-size:11px">题目内容</label>
+        <textarea rows="2" style="background:#fff;border:1px solid #e4ecf3;border-radius:7px;padding:8px 10px;font-size:13px;font-family:inherit;color:#0e2a47;outline:none;width:100%;resize:vertical"
+          onchange="quizMgrQuestions[${qi}].question=this.value">${q.question||''}</textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        ${['A','B','C','D'].map((letter,oi) => `
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;font-weight:700;color:${q.correct_answer===oi?'#2cad7f':'#7a94aa'};min-width:18px">${letter}</span>
+            <input class="tbl-input" style="font-size:12px" value="${(q.options&&q.options[oi])||''}" placeholder="选项${letter}"
+              onchange="quizMgrQuestions[${qi}].options[${oi}]=this.value">
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label class="form-label" style="font-size:11px;margin-bottom:0;white-space:nowrap">✅ 正确答案</label>
+          <select class="tbl-select" onchange="quizMgrQuestions[${qi}].correct_answer=parseInt(this.value)">
+            ${['A(0)','B(1)','C(2)','D(3)'].map((l,oi)=>`<option value="${oi}" ${q.correct_answer===oi?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label class="form-label" style="font-size:11px">解析说明（选填，答题后展示）</label>
+          <input class="tbl-input" style="font-size:12px" value="${q.explanation||''}" placeholder="解析内容..."
+            onchange="quizMgrQuestions[${qi}].explanation=this.value">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addQuizQuestion() {
+  quizMgrQuestions.push({
+    id: null, module_id: quizMgrModuleId,
+    sort_order: quizMgrQuestions.length + 1,
+    question: '', options: ['','','',''], correct_answer: 0, explanation: ''
+  });
+  renderQuizMgr();
+  // Scroll to bottom
+  document.getElementById('quiz-mgr-area').lastElementChild?.scrollIntoView({behavior:'smooth'});
+}
+
+function deleteQuizQuestion(qi) {
+  if (!confirm('确认删除第' + (qi+1) + '题？')) return;
+  quizMgrQuestions.splice(qi, 1);
+  renderQuizMgr();
+}
+
+async function saveQuizMgr() {
+  const msg = document.getElementById('quiz-mgr-msg');
+  msg.className = 'alert-info';
+  msg.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> 保存中...';
+  msg.classList.remove('hidden');
+
+  for (let qi = 0; qi < quizMgrQuestions.length; qi++) {
+    const q = quizMgrQuestions[qi];
+    if (!q.question.trim()) continue; // skip empty questions
+    const payload = {
+      module_id: quizMgrModuleId,
+      sort_order: qi + 1,
+      question: q.question,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      explanation: q.explanation || ''
+    };
+    if (q.id) {
+      await sb.from('quiz_questions').update(payload).eq('id', q.id);
+    } else {
+      const {data} = await sb.from('quiz_questions').insert(payload).select().single();
+      if (data) quizMgrQuestions[qi].id = data.id;
+    }
+  }
+  msg.className = 'alert-success';
+  msg.innerHTML = '<i class="ti ti-check"></i> 题目已保存！';
+  setTimeout(() => msg.classList.add('hidden'), 3000);
 }
 
 // --- Publish announcement ---
